@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Data;
+using System.Data.Odbc;
+using System.Data.SqlClient;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -19,10 +21,15 @@ namespace numFact
 
         public Boolean SeguirProcesandoVentas;
 
+
+
         public Form1()
         {
             InitializeComponent();
             pixelDAO = new PixelDao();
+            ConfigureDataGridView();
+            InitializeDatabaseConnection();
+            dataGridView1.AllowUserToAddRows = false;
         }
 
         private void buttonIniciarDia_Click(object sender, EventArgs e)
@@ -153,25 +160,32 @@ namespace numFact
             }
         }
 
-
+        ///--RG
 
         private void AsignarDescuentosSiHay()
         {
             SeguirProcesandoVentas = false;
 
+            //// Verificar si el dataGridView1 canales está vacío
+            //if (dataGridView1.Rows.Count == 0)
+            //{
+            //    MessageBox.Show("No hay datos en la tabla de canales ", "Información", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            //    return;
+            //}
+
+            // Verificar si hay alguna fila seleccionada en dataGridViewVentas
             if (dataGridViewVentas.SelectedRows.Count <= 0)
             {
-                throw new Exception("seleccione el día de venta");
+                throw new Exception("Seleccione el día de venta");
             }
 
-            //saco el id de la tabla para proceso de ventas
+            // Obtener el id de la tabla para proceso de ventas
             String idTabla = dataGridViewVentas.CurrentRow.Cells[0].Value.ToString();
 
-            //saco desde los totales calculados el descuento global
+            // Obtener el descuento global desde los totales calculados
             Decimal valorTotalDescuento = pixelDAO.DescuentoFaltanteGetTotal(idTabla);
 
-            //si el total de descuento es mayor a 0 se procede con la signación de descuentos, caso
-            //contrario se sigue el flujo normal
+            // Si el total de descuento es mayor a 0, proceder con la asignación de descuentos
             if (valorTotalDescuento > new Decimal(0.01))
             {
                 AsignacionDescuento asignacionDescuento = new AsignacionDescuento(idTabla, valorTotalDescuento);
@@ -182,6 +196,8 @@ namespace numFact
                 SeguirProcesandoVentas = true;
             }
         }
+
+
 
         private void buttonProcesarFacturasElectronicas_Click(object sender, EventArgs e)
         {
@@ -216,7 +232,7 @@ namespace numFact
         {
             try
             {
-                pixelDAO.ProvisionalEjecutarProcesoFE();
+                //pixelDAO.ProvisionalEjecutarProcesoFE();
                 MessageBox.Show("correcto");
             }
             catch (Exception ex)
@@ -294,5 +310,124 @@ namespace numFact
         {
 
         }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            // DataGridViewRow nuevaFila = new DataGridViewRow();
+            //nuevaFila.CreateCells(dataGridView1);
+
+            //dataGridView1.Rows.Add(nuevaFila);
+
+    
+            int rowIndex = dataGridView1.Rows.Add();
+
+            DataGridViewRow newRow = dataGridView1.Rows[rowIndex];
+
+            DataGridViewComboBoxCell comboBoxCell = new DataGridViewComboBoxCell();
+            comboBoxCell.Items.AddRange("UBER", "PEYA", "RAPPI", "SUPER EASY", "CANALES PROPIOS");
+
+            newRow.Cells[0] = comboBoxCell;
+
+
+        }
+
+        private void ConfigureDataGridView()
+        {
+          
+        }
+
+        private void BtnEliminar_Click(object sender, EventArgs e)
+        {
+            // Verificar si hay una fila seleccionada
+            if (dataGridView1.SelectedRows.Count > 0)
+            {
+                // Eliminar la fila seleccionada
+                foreach (DataGridViewRow row in dataGridView1.SelectedRows)
+                {
+                    if (!row.IsNewRow) // Verificar que no sea la fila de nueva entrada
+                    {
+                        dataGridView1.Rows.Remove(row);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Seleccione una fila para eliminar.");
+            }
+        }
+
+        private void InitializeDatabaseConnection()
+        {
+            // Inicializar la conexión a la base de datos
+            
+        }
+
+        private void BtnGuardar_Click(object sender, EventArgs e)
+        {
+
+            var conBI = new OdbcConnection();
+            // OdbcTransaction tranBI = conBI.BeginTransaction();
+            try
+            {
+                pixelDAO.guardarPlataformas(dataGridView1, dataGridViewVentas);
+                dataGridView1.Rows.Clear();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ocurrió un error al guardar los datos: " + ex.Message);
+            }
+
+
+        }
+
+        private void dataGridViewVentas_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void dataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+           
+        }
+
+        private void btnProcesarPlataformas_Click(object sender, EventArgs e)
+        {
+            // Verificar si hay filas con datos en el DataGridView1
+            bool hayDatos = false;
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                if (!row.IsNewRow && row.Cells.Cast<DataGridViewCell>().Any(cell => cell.Value != null && !string.IsNullOrWhiteSpace(cell.Value.ToString())))
+                {
+                    hayDatos = true;
+                    break;
+                }
+            }
+
+            // Mostrar mensaje si no hay datos para guardar
+            if (!hayDatos)
+            {
+                MessageBox.Show("No hay datos para grabar.");
+                return;
+            }
+
+            var conBI = new OdbcConnection();
+            // OdbcTransaction tranBI = conBI.BeginTransaction();
+            try
+            {
+                pixelDAO.guardarPlataformas(dataGridView1, dataGridViewVentas);
+                // dataGridView1.Rows.Clear();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ocurrió un error al guardar los datos: " + ex.Message);
+            }
+        }
+
     }
+
 }
